@@ -1,5 +1,9 @@
 <?php
 
+use dokuwiki\Extension\ActionPlugin;
+use dokuwiki\Extension\EventHandler;
+use dokuwiki\Extension\Event;
+
 /**
  * Translation Plugin: Simple multilanguage plugin
  *
@@ -7,14 +11,13 @@
  * @author     Andreas Gohr <andi@splitbrain.org>
  * @author     Guy Brand <gb@isis.u-strasbg.fr>
  */
-class action_plugin_translation extends DokuWiki_Action_Plugin
+class action_plugin_translation extends ActionPlugin
 {
-
     /**
      * For the helper plugin
      * @var helper_plugin_translation
      */
-    protected $helper = null;
+    protected $helper;
 
     /**
      * Constructor. Load helper plugin
@@ -29,7 +32,7 @@ class action_plugin_translation extends DokuWiki_Action_Plugin
      *
      * @param Doku_Event_Handler $controller
      */
-    public function register(Doku_Event_Handler $controller)
+    public function register(EventHandler $controller)
     {
         if ($this->getConf('translateui')) {
             $controller->register_hook('INIT_LANG_LOAD', 'BEFORE', $this, 'translateUI');
@@ -53,7 +56,7 @@ class action_plugin_translation extends DokuWiki_Action_Plugin
      *
      * @param Doku_Event $event INIT_LANG_LOAD
      */
-    public function translateUI(Doku_Event $event)
+    public function translateUI(Event $event)
     {
         global $conf;
         global $ACT;
@@ -91,7 +94,7 @@ class action_plugin_translation extends DokuWiki_Action_Plugin
      *
      * @param Doku_Event $event TPL_METAHEADER_OUTPUT
      */
-    public function translateJS(Doku_Event $event)
+    public function translateJS(Event $event)
     {
         global $conf;
 
@@ -108,7 +111,7 @@ class action_plugin_translation extends DokuWiki_Action_Plugin
      *
      * @param Doku_Event $event JS_CACHE_USE
      */
-    public function translateJSCache(Doku_Event $event)
+    public function translateJSCache(Event $event)
     {
         global $conf;
 
@@ -124,7 +127,7 @@ class action_plugin_translation extends DokuWiki_Action_Plugin
      *
      * @param Doku_Event $event TPL_CONTENT_DISPLAY
      */
-    public function addLanguageAttributes(Doku_Event $event)
+    public function addLanguageAttributes(Event $event)
     {
         global $ID;
         global $conf;
@@ -150,7 +153,7 @@ class action_plugin_translation extends DokuWiki_Action_Plugin
      *
      * @param Doku_Event $event DOKUWIKI_STARTED
      */
-    public function redirectStartPage(Doku_Event $event)
+    public function redirectStartPage(Event $event)
     {
         global $ID;
         global $ACT;
@@ -159,7 +162,7 @@ class action_plugin_translation extends DokuWiki_Action_Plugin
         if ($ID == $conf['start'] && $ACT == 'show') {
             $lc = $this->helper->getBrowserLang();
 
-            list($translatedStartpage,) = $this->helper->buildTransID($lc, $conf['start']);
+            [$translatedStartpage, ] = $this->helper->buildTransID($lc, $conf['start']);
             if (cleanID($translatedStartpage) !== cleanID($ID)) {
                 send_redirect(wl(cleanID($translatedStartpage), '', true));
             }
@@ -171,7 +174,7 @@ class action_plugin_translation extends DokuWiki_Action_Plugin
      *
      * @param Doku_Event $event TPL_METAHEADER_OUTPUT
      */
-    public function addHrefLangAttributes(Doku_Event $event)
+    public function addHrefLangAttributes(Event $event)
     {
         global $ID;
         global $conf;
@@ -204,7 +207,7 @@ class action_plugin_translation extends DokuWiki_Action_Plugin
      *
      * @param Doku_Event $event COMMON_PAGETPL_LOAD
      */
-    public function handlePageTemplates(Doku_Event $event)
+    public function handlePageTemplates(Event $event)
     {
         global $ID;
 
@@ -228,23 +231,19 @@ class action_plugin_translation extends DokuWiki_Action_Plugin
 
                 // show user a choice of translations if any
                 if (count($translations) > 1) {
-                    $links = array();
-                    foreach ($translations as $t => $l) {
-                        $links[] = '<a href="' . wl($ID, array(
-                                'do' => 'edit',
-                                'fromlang' => $t,
-                            )) . '">' . $this->helper->getLocalName($t) . '</a>';
+                    $links = [];
+                    foreach (array_keys($translations) as $t) {
+                        $links[] = '<a href="' . wl($ID, ['do' => 'edit', 'fromlang' => $t]) . '">' . $this->helper->getLocalName($t) . '</a>';
                     }
 
                     msg(
                         sprintf(
                             $this->getLang('transloaded'),
                             $this->helper->getLocalName($orig),
-                            join(', ', $links)
+                            implode(', ', $links)
                         )
                     );
                 }
-
             }
         }
 
@@ -259,14 +258,14 @@ class action_plugin_translation extends DokuWiki_Action_Plugin
      *
      * @param Doku_Event $event SEARCH_QUERY_PAGELOOKUP
      */
-    public function sortSearchResults(Doku_Event $event)
+    public function sortSearchResults(Event $event)
     {
         // sort into translation slots
         $res = [];
         foreach ($event->result as $r => $t) {
             $tr = $this->helper->getLangPart($r);
             if (!is_array($res["x$tr"])) $res["x$tr"] = [];
-            $res["x$tr"][] = array($r, $t);
+            $res["x$tr"][] = [$r, $t];
         }
         // sort by translations
         ksort($res);
