@@ -34,6 +34,7 @@ cv	Чӑваш Чӗлхи
 cy	Cymraeg
 da	Dansk
 de	Deutsch
+de-informal	Deutsch
 dv	ދިވެހި
 dz	རྫོང་ཁ
 ee	Eʋegbe
